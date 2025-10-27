@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Goblin Strike</title>
+    <link rel="shortcut icon" href="./assets/images/logo-wheat.png">
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="logo">
+                <a href="https://melopoiia.com/" id="logo-link" aria-label="Melopoiia">
+                    <img src="./assets/images/logo-wheat.png" alt="Melopoiia Logo">
+                </a>
+            </div>
+            <h1 class="title">Goblin Strike</h1>
+            <button class="menu-btn" aria-label="Menü öffnen">☰</button>
+        </header>
+
+        <main class="app-main">
+            <section class="order-row">
+                <div class="order-container" id="orderContainer">
+                    <h2 class="order-heading">Auftrag</h2>
+                    <p id="orderText" class="order-text">Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier eingefärbt. Wenn du ihn vor dem Singen noch einmal spielst, gibt es einen Punktabzug.</p>
+                    <div class="tone-display" aria-live="polite">
+                        <span class="tone-item tone-name" id="toneNote">–</span>
+                        <span class="tone-item tone-solfege" id="toneSolfege">–</span>
+                        <span class="tone-item tone-interval" id="toneInterval">–</span>
+                    </div>
+                    <div class="score-display">
+                        <span>Punkte: <strong id="scoreTotal">0</strong></span>
+                        <span>Abzüge: <strong id="scorePenalties">0</strong></span>
+                    </div>
+                </div>
+                <figure class="goblin-figure">
+                    <img id="goblinImg" src="./assets/images/goblin/waiting.png" alt="Goblin wartet" />
+                </figure>
+            </section>
+
+            <section class="controls-row">
+                <button id="btnStart" class="ctrl primary">Start</button>
+                <button id="btnAction" class="ctrl accent" disabled>Noch mal</button>
+                <button id="btnLevel" class="ctrl ghost" data-level="beginner">Level: Beginner</button>
+            </section>
+
+            <section class="keyboard-row" aria-label="Klaviertastatur">
+                <div id="keyboard" class="keyboard" aria-label="Klaviertastatur (C2–C4)"></div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <small>©️ Melopoiia – Trainingsprototyp</small>
+        </footer>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>
