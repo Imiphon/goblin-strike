@@ -23,7 +23,7 @@ export async function startMicrophone(onPitch) {
     audio: {
       echoCancellation: false,
       noiseSuppression: false,
-      autoGainControl: false,
+      autoGainControl: true,
     },
   });
   analyser = audioCtx.createAnalyser();

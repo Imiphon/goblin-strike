@@ -1,3 +1,5 @@
+const MIN_SIGNAL_RMS = 3e-4;
+
 export function detectPitchHz(timeDomain, sampleRate) {
   const size = timeDomain.length;
   let mean = 0;
@@ -10,7 +12,7 @@ export function detectPitchHz(timeDomain, sampleRate) {
     rms += v * v;
   }
   rms = Math.sqrt(rms / size);
-  if (rms < 0.0015) return null;
+  if (rms < MIN_SIGNAL_RMS) return null;
 
   const maxLag = Math.floor(sampleRate / 50);
   const minLag = Math.floor(sampleRate / 1000);

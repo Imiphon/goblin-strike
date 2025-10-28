@@ -393,17 +393,24 @@ function handlePitchUpdate(info) {
   }
   const targetBase = noteBase(state.currentTarget);
   const noteName = info.baseName;
-  if (noteName === targetBase && Math.abs(info.cents) <= TARGET_TOLERANCE_CENTS) {
-    if (state.detection.matchNote !== noteName) {
-      state.detection.matchNote = noteName;
-      state.detection.matchStreak = 0;
+  if (noteName === targetBase) {
+    if (Math.abs(info.cents) <= TARGET_TOLERANCE_CENTS) {
+      if (state.detection.matchNote !== noteName) {
+        state.detection.matchNote = noteName;
+        state.detection.matchStreak = 0;
+      }
+      state.detection.matchStreak += 1;
+      state.detection.wrongNote = null;
+      state.detection.wrongStreak = 0;
+      if (state.detection.matchStreak >= SUCCESS_FRAMES) {
+        handleSuccess();
+      }
+      return;
     }
-    state.detection.matchStreak += 1;
+    state.detection.matchNote = null;
+    state.detection.matchStreak = 0;
     state.detection.wrongNote = null;
     state.detection.wrongStreak = 0;
-    if (state.detection.matchStreak >= SUCCESS_FRAMES) {
-      handleSuccess();
-    }
     return;
   }
   if (noteName) {
@@ -432,7 +439,7 @@ async function handleSuccess() {
     'Spiele den Ton so oft du magst noch einmal. Klicke auf "Nächster Ton" und singe ihn.'
   );
   await showGoblin("win");
-  showGoblin("waiting", { playAudio: false });
+  showGoblin("hello", { playAudio: false });
   setActionMode("next", { disabled: false });
   state.detection.successFlashUntil = performance.now() + 1400;
   updateKeyboardHighlights();

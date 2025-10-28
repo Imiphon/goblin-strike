@@ -3,10 +3,10 @@ export const NOTE_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A",
 export const KEY_RANGE = { min: "C2", max: "C4" };
 
 export const GOBLIN_STATES = {
-  hello: { img: "hello", audio: "hello", alt: "Goblin begrüßt dich" },
-  waiting: { img: "waiting", audio: "waiting", alt: "Goblin wartet gespannt" },
-  win: { img: "win", audio: "win", alt: "Goblin jubelt" },
-  lose: { img: "lose", audio: "lose", alt: "Goblin ist enttäuscht" },
+  hello: { img: "hello", audio: "hello", alt: "Goblin begrüßt dich", fallbackMs: 1400 },
+  waiting: { img: "waiting", audio: "waiting", alt: "Goblin wartet gespannt", fallbackMs: 800 },
+  win: { img: "win", audio: "win", alt: "Goblin sagt ok", fallbackMs: 2000 },
+  lose: { img: "lose", audio: "lose", alt: "Goblin lacht", fallbackMs: 2000 },
 };
 
 export const LEVELS = [
