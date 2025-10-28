@@ -6,6 +6,8 @@ let currentAudio = null;
 let primed = false;
 let primePromise = null;
 const audioCache = new Map();
+const succeedClips = ["succeed/cheers", "succeed/frendly", "succeed/laugh", "succeed/nerved", "succeed/okay"];
+const failClips = ["fail/lough-evil", "fail/wrong"];
 
 function audioPath(name) {
   return `./assets/audio/goblin/${name}.mp3`;
@@ -37,7 +39,7 @@ function getAudio(name) {
 export function primeGoblinAudio() {
   if (primed) return primePromise || Promise.resolve();
   if (primePromise) return primePromise;
-  const ids = ["hello", "win", "lose", "waiting"];
+  const ids = ["hello", "waiting", ...succeedClips, ...failClips];
   primePromise = Promise.all(
     ids.map((id) => {
       const audio = getAudio(id);
@@ -72,7 +74,15 @@ export function showGoblin(stateId, { playAudio = true } = {}) {
   if (!primed) {
     primeGoblinAudio().catch(() => {});
   }
-  const meta = GOBLIN_STATES[stateId] || GOBLIN_STATES.waiting;
+  const baseMeta = GOBLIN_STATES[stateId] || GOBLIN_STATES.waiting;
+  const meta = { ...baseMeta };
+  if (stateId === "win") {
+    const pick = succeedClips[Math.floor(Math.random() * succeedClips.length)];
+    meta.audio = pick;
+  } else if (stateId === "lose") {
+    const pick = failClips[Math.floor(Math.random() * failClips.length)];
+    meta.audio = pick;
+  }
   if (imgEl) {
     imgEl.dataset.goblinState = stateId;
     imgEl.src = imagePath(meta.img);

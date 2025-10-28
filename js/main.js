@@ -53,7 +53,7 @@ const state = {
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
-const TARGET_TOLERANCE_CENTS = 45;
+const TARGET_TOLERANCE_CENTS = 50;
 const TARGET_TOLERANCE_OCTAVE_RELAXED = 1200; // allow any octave when toggle is off
 const SUCCESS_FRAMES = 10;
 const FAILURE_FRAMES = 14;
@@ -552,5 +552,5 @@ function refreshOctaveToggle() {
   if (!els.octaveToggle) return;
   const pressed = state.octaveStrict;
   els.octaveToggle.setAttribute("aria-pressed", pressed ? "true" : "false");
-  els.octaveToggle.textContent = pressed ? "Oktavtreu" : "Stimmig";
+  els.octaveToggle.textContent = "OKTAVTREU";
 }
