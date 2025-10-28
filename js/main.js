@@ -16,6 +16,8 @@ const els = {
   toneSolfege: document.getElementById("toneSolfege"),
   toneInterval: document.getElementById("toneInterval"),
   octaveToggle: document.getElementById("octaveToggle"),
+  streakBadge: document.getElementById("streakBadge"),
+  streakCount: document.getElementById("streakCount"),
   btnStart: document.getElementById("btnStart"),
   btnAction: document.getElementById("btnAction"),
   btnLevel: document.getElementById("btnLevel"),
@@ -47,6 +49,7 @@ const state = {
   actionMode: "replay",
   detection: createDetectionState(),
   octaveStrict: true,
+  streak: 0,
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
@@ -112,6 +115,8 @@ function init() {
   els.octaveToggle.addEventListener("click", handleOctaveToggle);
   setActionMode("replay", { disabled: true });
   setOrderText("Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt.");
+  refreshOctaveToggle();
+  updateStreakDisplay();
 }
 
 function updateLevelButton() {
@@ -186,6 +191,28 @@ function updateToneDisplay(note) {
   refreshOctaveToggle();
 }
 
+function resetStreak() {
+  state.streak = 0;
+  updateStreakDisplay();
+}
+
+function incrementStreak() {
+  state.streak += 1;
+  updateStreakDisplay();
+}
+
+function updateStreakDisplay() {
+  if (!els.streakBadge || !els.streakCount) return;
+  if (state.streak >= 2) {
+    els.streakCount.textContent = state.streak.toString();
+    els.streakBadge.hidden = false;
+    els.streakBadge.style.display = "flex";
+  } else {
+    els.streakBadge.hidden = true;
+    els.streakBadge.style.display = "none";
+  }
+}
+
 function describeTarget(note) {
   if (!note) return "";
   const [base, octave] = splitNote(note);
@@ -225,6 +252,7 @@ async function startSession() {
   clearHighlights();
   updateToneDisplay(null);
   els.btnStart.textContent = "Neu";
+  resetStreak();
   const initialNote = "C2";
   state.referenceNote = initialNote;
   state.currentTarget = initialNote;
@@ -251,6 +279,7 @@ function resetSession() {
   setOrderText(
     "Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt."
   );
+  resetStreak();
   showGoblin("waiting", { playAudio: false });
   stopMicrophone();
   state.microphoneReady = false;
@@ -280,6 +309,7 @@ async function replayReference({ penalize = false } = {}) {
   if (penalize) {
     setOrderText("Es erklingt nochmal der vorherige Ton (Punktabzug). Hör genau hin und sing erneut.");
     showGoblin("waiting", { playAudio: false });
+    resetStreak();
   } else {
     setOrderText("Es erklingt nochmal der vorherige Ton. Hör genau hin und versuche es erneut.");
     showGoblin("hello", { playAudio: false });
@@ -384,6 +414,7 @@ async function handleManualKey(note) {
   setOrderText(
     "Den Zielton nicht vorher hören! Singe den geforderten Ton."
   );
+  resetStreak();
   setMicrophonePaused(true);
   await playNote(note);
   setMicrophonePaused(false);
@@ -439,6 +470,7 @@ function handlePitchUpdate(info) {
 async function handleSuccess() {
   state.listening = false;
   setMicrophonePaused(true);
+  incrementStreak();
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
   const successOrderText =
@@ -458,6 +490,7 @@ async function handleSuccess() {
 async function handleFailure() {
   state.listening = false;
   setMicrophonePaused(true);
+  resetStreak();
   setOrderText("Das war ein falscher Ton. Der Kobold spielt den vorherigen Ton noch einmal.");
   state.detection.lastMissedNote = state.currentTarget;
   state.detection.missUntil = performance.now() + 2500;
