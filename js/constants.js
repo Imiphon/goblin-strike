@@ -12,7 +12,7 @@ export const GOBLIN_STATES = {
 export const LEVELS = [
   {
     id: "beginner",
-    label: "Beginner",
+    label: "Start",
     description: "Starte mit großen Sekunden, steigere Intervalle bis zur Tredezime.",
     baseMax: 2,
     growthSteps: [2, 4, 5, 7, 9, 12, 14, 17, 19, 21],

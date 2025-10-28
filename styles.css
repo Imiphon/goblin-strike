@@ -39,7 +39,7 @@ body {
 .app-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: space-around;
     padding: 20px 28px;
     position: sticky;
     top: 0;
@@ -87,15 +87,23 @@ body {
     gap: 32px;
 }
 
-.order-row {
+.main-top {
     display: flex;
     gap: 32px;
     align-items: stretch;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
-.order-container {
-    flex: 1 1 360px;
+.main-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1 1 auto;
+}
+
+.top-left {
+    flex: 1 1 50%;
+    min-width: 320px;
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 20px;
@@ -103,16 +111,15 @@ body {
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
 }
 
-.order-heading {
-    margin: 0;
-    font-size: 1.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-}
+    .top-left-bottom {
+       display: flex; 
+       flex-direction: row;
+       align-items: center;
+       justify-content: space-evenly;
+    }
 
 .order-text {
     margin: 0;
@@ -122,11 +129,43 @@ body {
     border-radius: 12px;
 }
 
+.order-stats {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.rotate-notice {
+    display: none;
+    font-size: 0.9rem;
+    color: var(--bg);
+    background: rgba(250, 204, 21);
+    border: 1px dashed rgba(250, 204, 21, 0.45);
+    border-radius: 12px;
+    padding: 10px 14px;
+    position: absolute;
+    left: 30%;
+    text-wrap: wrap;
+    width: min-content;
+    z-index: 1;
+    font-weight: 900;
+}
+
 .tone-display {
     display: flex;
-    gap: 12px;
+    gap: 4px;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
+}
+
+.tone-label {
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
 }
 
 .tone-item {
@@ -154,7 +193,7 @@ body {
 
 .score-display {
     display: flex;
-    gap: 18px;
+    gap: 16px;
     flex-wrap: wrap;
     font-size: 0.95rem;
     color: var(--muted);
@@ -167,7 +206,8 @@ body {
 
 .goblin-figure {
     margin: 0;
-    flex: 0 0 220px;
+    width: 100%;
+    flex: 1 1 auto;
     background: var(--bg-panel-strong);
     border-radius: 24px;
     display: flex;
@@ -198,6 +238,36 @@ body {
     align-items: center;
 }
 
+.top-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1 1 40%;
+    min-width: 260px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.controls-row .ctrl {
+    min-width: auto;
+    padding: 8px 14px;
+}
+
+.top-right .score-display {
+    font-size: 0.85rem;
+    gap: 12px;
+    justify-content: center;
+}
+
+.top-right .score-display strong {
+    font-size: 0.95rem;
+}
+
+.top-right .controls-row .ctrl {
+    padding: 8px 8px;
+    font-size: 0.85rem;
+}
+
 .ctrl {
     border: 1px solid transparent;
     border-radius: 16px;
@@ -221,9 +291,23 @@ body {
 }
 
 .ctrl.accent {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--muted);
+    border-color: rgba(148, 163, 184, 0.32);
+}
+
+.ctrl.accent.is-replay {
+    background: rgba(59, 130, 246, 0.12);
+    color: rgba(59, 130, 246, 0.92);
+    border-color: rgba(59, 130, 246, 0.45);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+}
+
+.ctrl.accent.is-next {
     background: rgba(250, 204, 21, 0.12);
     color: var(--accent);
-    border-color: rgba(250, 204, 21, 0.4);
+    border-color: rgba(250, 204, 21, 0.45);
+    box-shadow: 0 12px 24px rgba(250, 204, 21, 0.18);
 }
 
 .ctrl.ghost {
@@ -236,12 +320,24 @@ body {
     transform: translateY(-2px);
 }
 
+.ctrl.accent.is-replay:not(:disabled):hover {
+    background: rgba(59, 130, 246, 0.18);
+}
+
+.ctrl.accent.is-next:not(:disabled):hover {
+    background: rgba(250, 204, 21, 0.18);
+}
+
 .keyboard-row {
     background: var(--bg-panel);
     border-radius: 24px;
     border: 1px solid var(--border);
     padding: 24px;
     box-shadow: var(--shadow-lg);
+}
+
+.main-bottom .keyboard-row {
+    flex: 1 1 auto;
 }
 
 .keyboard {
@@ -264,6 +360,7 @@ body {
 }
 
 .key-slot {
+    height: 100%;
     position: relative;
     flex: 0 0 var(--white-key-width);
     min-width: var(--white-key-width);
@@ -400,6 +497,26 @@ body {
     font-weight: 600;
 }
 
+.text-super {
+    display: block;
+    text-align: center;
+    color: #facc15;
+    font-weight: 700;
+    font-size: 2.75rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.text-tone {
+    color: rgba(96, 165, 250, 0.92);
+    font-weight: 600;
+}
+
+.text-highlight {
+    color: var(--accent);
+    font-weight: 700;
+}
+
 .key.missed {
     border-color: rgba(248, 113, 113, 1);
     box-shadow: inset 0 -18px 0 rgba(248, 113, 113, 0.45), 0 0 36px rgba(248, 113, 113, 0.75), 0 0 0 2px rgba(248, 113, 113, 0.5);
@@ -417,25 +534,88 @@ body {
 }
 
 @media (max-width: 960px) {
-    .controls-row {
-        justify-content: center;
+    .main-top {
+        flex-direction: row;
+        gap: 16px;
+        flex-wrap: nowrap;
+    }
+
+
+    .app-header {
+        position: inherit;
+    }
+
+    .top-left,
+    .top-right {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .top-left {
+            gap: 0;
+        min-width: 0;
+        width: 70%;
+        height: min-content;
+        padding: 12px;
+    }
+
+
+
+    .order-stats {
+        gap: 18px;
+        justify-content: flex-start;
+    }
+
+    .top-right {
+        align-items: center;
     }
 
     .goblin-figure {
-        flex: 1 1 100%;
-        order: -1;
+        width: 60%;
+        padding: 0;
     }
 
     .goblin-figure img {
         max-width: 160px;
     }
 
-    .keyboard {
-        height: 180px;
+    .controls-row {
+        justify-content: center;
+        gap: 4px;
+    }
+    .controls-row button {
+        font-size: x-small;
+        text-wrap: wrap;
+        width: min-content;
     }
 
-    .key {
-        height: 168px;
+    .main-bottom {
+        flex: 0 0 30%;
+        height: 30vh;
+        max-height: 30vh;
+        min-height: 0;
+    }
+
+    .main-bottom .keyboard-row {
+        height: 100%;
+        min-height: 0;
+        padding: 12px;
+        overflow: hidden;
+    }
+
+    .main-bottom .keyboard {
+        height: 30vh;
+        min-height: 0;
+        padding: 0 12px 12px;
+        overflow: hidden;
+    }
+
+    .main-bottom .keyboard .key {
+        height: 100%;
+    }
+
+    .main-bottom .keyboard .key.black {
+        height: 70%;
     }
 }
 
@@ -449,11 +629,92 @@ body {
     }
 
     .app-main {
-        padding: 24px 16px 32px;
-        gap: 24px;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 16px;
+        padding: 20px 14px 28px;
     }
 
-    .order-container {
-        padding: 22px;
+    .main-top {
+        flex: 0 0 70%;
+        height: 70vh;
+        max-height: 70vh;
+        overflow: auto;
+        gap: 16px;
+        flex-wrap: nowrap;
+    }
+
+    .top-left {
+        padding: 18px;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .order-stats {
+        gap: 14px;
+    }
+
+    .tone-display {
+        gap: 8px;
+    }
+
+    .tone-item {
+        padding: 6px 10px;
+    }
+
+    .top-right {
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .goblin-figure {
+        padding: 12px;
+    }
+
+    .top-right .score-display {
+        font-size: 0.78rem;
+        gap: 10px;
+    }
+
+    .top-right .controls-row {
+        gap: 10px;
+    }
+
+    .top-right .controls-row .ctrl {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+
+    .main-bottom {
+        flex: 0 0 30%;
+        height: 30vh;
+        max-height: 30vh;
+        display: flex;
+    }
+
+    .main-bottom .keyboard-row {
+        flex: 1 1 auto;
+        height: 100%;
+        padding: 14px;
+    }
+
+    .keyboard {
+        height: 100%;
+        padding: 0 12px 12px;
+    }
+
+    .key {
+        height: 100%;
+    }
+
+    .key.black {
+        height: 70%;
+    }
+
+    .rotate-notice {
+        display: block;
+        text-align: center;
     }
 }

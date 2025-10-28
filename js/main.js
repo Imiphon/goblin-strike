@@ -52,10 +52,19 @@ const state = {
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
-const TARGET_TOLERANCE_CENTS = 35;
+const TARGET_TOLERANCE_CENTS = 45;
 const SUCCESS_FRAMES = 10;
 const FAILURE_FRAMES = 14;
 const ORDER_HIGHLIGHTS = [
+  {
+    regex: /Singe folgendes: ([^·]+) · ([^·]+) · ([^.]+)/,
+    replacer: (_, part1, part2, part3) =>
+      `Singe folgendes: <span class="text-highlight">${part1.trim()}</span> · <span class="text-highlight">${part2.trim()}</span> · <span class="text-highlight">${part3.trim()}</span>`,
+  },
+  { regex: /SUPER!/, className: "text-super" },
+  { regex: /Ton(?= so oft du magst)/, className: "text-tone" },
+  { regex: /Sing den gehörten Ton nach\. Der Kobold wartet gespannt!/, className: "text-warning" },
+  { regex: /vorherige Ton/, className: "text-tone" },
   { regex: /\bTon getroffen\b/gi, className: "text-success" },
   { regex: /\bfalscher Ton\b/gi, className: "text-danger" },
   { regex: /\bPunktabzug\b/gi, className: "text-danger" },
@@ -75,8 +84,15 @@ function escapeHtml(text) {
 function applyOrderHighlights(text) {
   const source = typeof text === "string" ? text : String(text ?? "");
   let escaped = escapeHtml(source);
-  ORDER_HIGHLIGHTS.forEach(({ regex, className }) => {
-    escaped = escaped.replace(regex, (match) => `<span class="${className}">${match}</span>`);
+  ORDER_HIGHLIGHTS.forEach(({ regex, className, replacer }) => {
+    if (typeof replacer === "function") {
+      escaped = escaped.replace(regex, replacer);
+      return;
+    }
+    escaped = escaped.replace(regex, (match) => {
+      if (!className) return match;
+      return `<span class="${className}">${match}</span>`;
+    });
   });
   return escaped;
 }
@@ -130,10 +146,13 @@ function setOrderText(text) {
 
 function setActionMode(mode, { disabled = false } = {}) {
   state.actionMode = mode;
+  els.btnAction.classList.remove("is-next", "is-replay");
   if (mode === "next") {
     els.btnAction.textContent = "Nächster Ton";
+    els.btnAction.classList.add("is-next");
   } else {
     els.btnAction.textContent = "Noch mal";
+    els.btnAction.classList.add("is-replay");
   }
   els.btnAction.disabled = disabled;
 }
@@ -261,18 +280,18 @@ async function handleAction() {
     await advanceToNextTarget();
     return;
   }
-  await replayReference();
+  await replayReference({ penalize: false });
 }
 
-async function replayReference({ penalize = true } = {}) {
+async function replayReference({ penalize = false } = {}) {
   if (!state.referenceNote) return;
   if (penalize) {
     state.penalties += 1;
     updateScore();
-    setOrderText("Referenzton läuft (Punktabzug). Hör genau hin und sing erneut.");
+    setOrderText("Es erklingt nochmal der vorherige Ton (Punktabzug). Hör genau hin und sing erneut.");
     showGoblin("waiting", { playAudio: false });
   } else {
-    setOrderText("Referenzton läuft. Hör genau hin und versuche es erneut.");
+    setOrderText("Es erklingt nochmal der vorherige Ton. Hör genau hin und versuche es erneut.");
     showGoblin("hello", { playAudio: false });
     state.detection.lastMissedNote = null;
     state.detection.missUntil = 0;
@@ -435,10 +454,11 @@ async function handleSuccess() {
   updateScore();
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
-  setOrderText(
-    'Spiele den Ton so oft du magst noch einmal. Klicke auf "Nächster Ton" und singe ihn.'
-  );
-  await showGoblin("win");
+  const successOrderText =
+    'Spiele den Ton so oft du magst noch einmal. Klicke auf "Nächster Ton" und singe ihn.';
+  setOrderText("SUPER!");
+  await Promise.all([showGoblin("win"), delay(2000)]);
+  setOrderText(successOrderText);
   showGoblin("hello", { playAudio: false });
   setActionMode("next", { disabled: false });
   state.detection.successFlashUntil = performance.now() + 1400;
@@ -451,7 +471,7 @@ async function handleSuccess() {
 async function handleFailure() {
   state.listening = false;
   setMicrophonePaused(true);
-  setOrderText("Das war ein falscher Ton. Der Kobold spielt den Referenzton noch einmal.");
+  setOrderText("Das war ein falscher Ton. Der Kobold spielt den vorherigen Ton noch einmal.");
   state.detection.lastMissedNote = state.currentTarget;
   state.detection.missUntil = performance.now() + 2500;
   updateKeyboardHighlights();
