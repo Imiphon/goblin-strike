@@ -382,7 +382,7 @@ async function handleManualKey(note) {
     return;
   }
   setOrderText(
-    "Du hast die Taste gespielt. Punktabzug! Singe nun ohne weitere Hilfe den geforderten Ton."
+    "Den Zielton nicht vorher hören! Singe den geforderten Ton."
   );
   setMicrophonePaused(true);
   await playNote(note);
