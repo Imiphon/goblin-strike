@@ -148,7 +148,7 @@ function setActionMode(mode, { disabled = false } = {}) {
   state.actionMode = mode;
   els.btnAction.classList.remove("is-next", "is-replay");
   if (mode === "next") {
-    els.btnAction.textContent = "Nächster Ton";
+    els.btnAction.textContent = "Weiter";
     els.btnAction.classList.add("is-next");
   } else {
     els.btnAction.textContent = "Noch mal";
@@ -227,17 +227,18 @@ async function startSession() {
   updateScore();
   clearHighlights();
   updateToneDisplay(null);
-  els.btnStart.textContent = "Restart";
+  els.btnStart.textContent = "Neu";
   setActionMode("replay", { disabled: true });
   setMicrophonePaused(true);
-  await showGoblin("hello");
-  await playReference("C2", { announce: true });
-  setOrderText("Sing den gehörten Ton nach. Der Kobold wartet gespannt!");
-  state.referenceNote = "C2";
-  state.currentTarget = "C2";
+  const initialNote = "C2";
+  state.referenceNote = initialNote;
+  state.currentTarget = initialNote;
   state.previousNote = null;
   updateToneDisplay(state.currentTarget);
   updateKeyboardHighlights();
+  await showGoblin("hello");
+  await playReference(initialNote, { announce: true });
+  setOrderText("Sing den gehörten Ton nach. Der Kobold wartet gespannt!");
   state.stage = 0;
   prepareListening();
 }
@@ -455,7 +456,7 @@ async function handleSuccess() {
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
   const successOrderText =
-    'Spiele den Ton so oft du magst noch einmal. Klicke auf "Nächster Ton" und singe ihn.';
+    'Spiele den Ton so oft du magst noch einmal. Klicke auf "Weiter" und singe ihn.';
   setOrderText("SUPER!");
   await Promise.all([showGoblin("win"), delay(2000)]);
   setOrderText(successOrderText);

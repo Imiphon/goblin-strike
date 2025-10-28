@@ -1,4 +1,5 @@
 import { GOBLIN_STATES } from "../constants.js";
+// Playback relies on direct user interaction (button presses) to satisfy mobile autoplay rules.
 
 let imgEl = null;
 let currentAudio = null;
