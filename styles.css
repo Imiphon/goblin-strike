@@ -114,12 +114,11 @@ body {
     gap: 18px;
 }
 
-    .top-left-bottom {
-       display: flex; 
-       flex-direction: row;
-       align-items: center;
-       justify-content: space-evenly;
-    }
+.top-left-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
 
 .order-text {
     margin: 0;
@@ -191,19 +190,6 @@ body {
     color: var(--muted);
 }
 
-.score-display {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    font-size: 0.95rem;
-    color: var(--muted);
-}
-
-.score-display strong {
-    color: var(--accent);
-    font-weight: 700;
-}
-
 .goblin-figure {
     margin: 0;
     width: 100%;
@@ -236,16 +222,7 @@ body {
     gap: 16px;
     flex-wrap: wrap;
     align-items: center;
-}
-
-.top-right {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    flex: 1 1 40%;
-    min-width: 260px;
-    align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .controls-row .ctrl {
@@ -253,19 +230,13 @@ body {
     padding: 8px 14px;
 }
 
-.top-right .score-display {
-    font-size: 0.85rem;
-    gap: 12px;
+.top-right {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 40%;
+    min-width: 260px;
+    align-items: center;
     justify-content: center;
-}
-
-.top-right .score-display strong {
-    font-size: 0.95rem;
-}
-
-.top-right .controls-row .ctrl {
-    padding: 8px 8px;
-    font-size: 0.85rem;
 }
 
 .ctrl {
@@ -493,7 +464,7 @@ body {
 }
 
 .text-warning {
-    color: rgba(250, 204, 21, 0.92);
+    color: rgba(250, 204, 21, 1);
     font-weight: 600;
 }
 
@@ -540,7 +511,6 @@ body {
         flex-wrap: nowrap;
     }
 
-
     .app-header {
         position: inherit;
     }
@@ -552,14 +522,10 @@ body {
     }
 
     .top-left {
-            gap: 0;
+        gap: 12px;
         min-width: 0;
-        width: 70%;
-        height: min-content;
         padding: 12px;
     }
-
-
 
     .order-stats {
         gap: 18px;
@@ -568,11 +534,12 @@ body {
 
     .top-right {
         align-items: center;
+        justify-content: center;
     }
 
     .goblin-figure {
-        width: 60%;
-        padding: 0;
+        width: 70%;
+        padding: 12px;
     }
 
     .goblin-figure img {
@@ -583,10 +550,9 @@ body {
         justify-content: center;
         gap: 4px;
     }
-    .controls-row button {
+    .controls-row .ctrl {
         font-size: x-small;
-        text-wrap: wrap;
-        width: min-content;
+        padding: 6px 10px;
     }
 
     .main-bottom {
@@ -604,7 +570,7 @@ body {
     }
 
     .main-bottom .keyboard {
-        height: 30vh;
+        height: 100%;
         min-height: 0;
         padding: 0 12px 12px;
         overflow: hidden;
@@ -667,22 +633,20 @@ body {
     .top-right {
         gap: 12px;
         min-width: 0;
+        align-items: center;
+        justify-content: center;
     }
 
     .goblin-figure {
         padding: 12px;
     }
 
-    .top-right .score-display {
-        font-size: 0.78rem;
+    .controls-row {
         gap: 10px;
+        justify-content: center;
     }
 
-    .top-right .controls-row {
-        gap: 10px;
-    }
-
-    .top-right .controls-row .ctrl {
+    .controls-row .ctrl {
         padding: 6px 10px;
         font-size: 0.78rem;
     }

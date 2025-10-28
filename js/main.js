@@ -15,8 +15,6 @@ const els = {
   toneNote: document.getElementById("toneNote"),
   toneSolfege: document.getElementById("toneSolfege"),
   toneInterval: document.getElementById("toneInterval"),
-  scoreTotal: document.getElementById("scoreTotal"),
-  scorePenalties: document.getElementById("scorePenalties"),
   btnStart: document.getElementById("btnStart"),
   btnAction: document.getElementById("btnAction"),
   btnLevel: document.getElementById("btnLevel"),
@@ -43,8 +41,6 @@ const state = {
   currentTarget: null,
   previousNote: null,
   referenceNote: null,
-  successes: 0,
-  penalties: 0,
   microphoneReady: false,
   listening: false,
   actionMode: "replay",
@@ -63,13 +59,13 @@ const ORDER_HIGHLIGHTS = [
   },
   { regex: /SUPER!/, className: "text-super" },
   { regex: /Ton(?= so oft du magst)/, className: "text-tone" },
-  { regex: /Sing den gehörten Ton nach\. Der Kobold wartet gespannt!/, className: "text-warning" },
+  { regex: /Sing den gehörten Ton nach\. Der Ton wird auf dem Klavier gelb eingefärbt\./, className: "text-warning" },
   { regex: /vorherige Ton/, className: "text-tone" },
   { regex: /\bTon getroffen\b/gi, className: "text-success" },
   { regex: /\bfalscher Ton\b/gi, className: "text-danger" },
   { regex: /\bPunktabzug\b/gi, className: "text-danger" },
   { regex: /\bgeforderten Ton\b/gi, className: "text-warning" },
-  { regex: /\beingefärbt\b/gi, className: "text-warning" },
+  { regex: /\bgelb eingefärbt\b/gi, className: "text-warning" },
 ];
 
 function escapeHtml(text) {
@@ -106,15 +102,12 @@ function init() {
   buildKeyboard(els.keyboard, KEY_RANGE, { onNote: handleManualKey });
   preloadNotes(NOTES_IN_RANGE).catch(() => {});
   updateLevelButton();
-  updateScore();
   updateToneDisplay(null);
   els.btnStart.addEventListener("click", handleStart);
   els.btnAction.addEventListener("click", handleAction);
   els.btnLevel.addEventListener("click", handleLevelToggle);
   setActionMode("replay", { disabled: true });
-  setOrderText(
-    "Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier eingefärbt. Wenn du ihn vor dem Singen noch einmal spielst, gibt es einen Punktabzug."
-  );
+  setOrderText("Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt.");
 }
 
 function updateLevelButton() {
@@ -155,12 +148,6 @@ function setActionMode(mode, { disabled = false } = {}) {
     els.btnAction.classList.add("is-replay");
   }
   els.btnAction.disabled = disabled;
-}
-
-function updateScore() {
-  const total = Math.max(0, state.successes * 5 - state.penalties);
-  els.scoreTotal.textContent = total.toString();
-  els.scorePenalties.textContent = state.penalties.toString();
 }
 
 function noteBase(note) {
@@ -211,34 +198,33 @@ async function handleStart() {
 }
 
 async function startSession() {
+  setActionMode("replay", { disabled: true });
+  setMicrophonePaused(true);
+  const helloPromise = showGoblin("hello");
   try {
     await ensureMicrophone();
   } catch {
+    await helloPromise;
+    showGoblin("waiting", { playAudio: false });
     return;
   }
+  await helloPromise;
   state.running = true;
   state.stage = 0;
-  state.successes = 0;
-  state.penalties = 0;
   state.previousNote = null;
   state.currentTarget = null;
   state.referenceNote = null;
   state.detection = createDetectionState();
-  updateScore();
   clearHighlights();
   updateToneDisplay(null);
   els.btnStart.textContent = "Neu";
-  setActionMode("replay", { disabled: true });
-  setMicrophonePaused(true);
   const initialNote = "C2";
   state.referenceNote = initialNote;
   state.currentTarget = initialNote;
-  state.previousNote = null;
   updateToneDisplay(state.currentTarget);
   updateKeyboardHighlights();
-  await showGoblin("hello");
   await playReference(initialNote, { announce: true });
-  setOrderText("Sing den gehörten Ton nach. Der Kobold wartet gespannt!");
+  setOrderText("Sing den gehörten Ton nach. Der Ton wird auf dem Klavier gelb eingefärbt.");
   state.stage = 0;
   prepareListening();
 }
@@ -247,8 +233,6 @@ function resetSession() {
   setMicrophonePaused(true);
   state.running = false;
   state.stage = 0;
-  state.successes = 0;
-  state.penalties = 0;
   state.previousNote = null;
   state.currentTarget = null;
   state.referenceNote = null;
@@ -256,10 +240,9 @@ function resetSession() {
   els.btnStart.textContent = "Start";
   setActionMode("replay", { disabled: true });
   updateToneDisplay(null);
-  updateScore();
   clearHighlights();
   setOrderText(
-    "Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier eingefärbt. Wenn du ihn vor dem Singen noch einmal spielst, gibt es einen Punktabzug."
+    "Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt."
   );
   showGoblin("waiting", { playAudio: false });
   stopMicrophone();
@@ -287,8 +270,6 @@ async function handleAction() {
 async function replayReference({ penalize = false } = {}) {
   if (!state.referenceNote) return;
   if (penalize) {
-    state.penalties += 1;
-    updateScore();
     setOrderText("Es erklingt nochmal der vorherige Ton (Punktabzug). Hör genau hin und sing erneut.");
     showGoblin("waiting", { playAudio: false });
   } else {
@@ -392,8 +373,6 @@ async function handleManualKey(note) {
     }
     return;
   }
-  state.penalties += 1;
-  updateScore();
   setOrderText(
     "Du hast die Taste gespielt. Punktabzug! Singe nun ohne weitere Hilfe den geforderten Ton."
   );
@@ -451,8 +430,6 @@ function handlePitchUpdate(info) {
 async function handleSuccess() {
   state.listening = false;
   setMicrophonePaused(true);
-  state.successes += 1;
-  updateScore();
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
   const successOrderText =
