@@ -3,7 +3,7 @@ import { linearNotes, pitchIndex, splitNote } from "./utils/notes.js";
 import { randomInt } from "./utils/random.js";
 import { buildKeyboard, setHighlights, clearHighlights } from "./keyboard.js";
 import { preloadNotes, playNote } from "./audio/piano.js";
-import { initGoblin, showGoblin } from "./audio/goblin.js";
+import { initGoblin, showGoblin, primeGoblinAudio } from "./audio/goblin.js";
 import {
   startMicrophone,
   setMicrophonePaused,
@@ -15,6 +15,7 @@ const els = {
   toneNote: document.getElementById("toneNote"),
   toneSolfege: document.getElementById("toneSolfege"),
   toneInterval: document.getElementById("toneInterval"),
+  octaveToggle: document.getElementById("octaveToggle"),
   btnStart: document.getElementById("btnStart"),
   btnAction: document.getElementById("btnAction"),
   btnLevel: document.getElementById("btnLevel"),
@@ -45,10 +46,12 @@ const state = {
   listening: false,
   actionMode: "replay",
   detection: createDetectionState(),
+  octaveStrict: true,
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
 const TARGET_TOLERANCE_CENTS = 45;
+const TARGET_TOLERANCE_OCTAVE_RELAXED = 1200; // allow any octave when toggle is off
 const SUCCESS_FRAMES = 10;
 const FAILURE_FRAMES = 14;
 const ORDER_HIGHLIGHTS = [
@@ -106,6 +109,7 @@ function init() {
   els.btnStart.addEventListener("click", handleStart);
   els.btnAction.addEventListener("click", handleAction);
   els.btnLevel.addEventListener("click", handleLevelToggle);
+  els.octaveToggle.addEventListener("click", handleOctaveToggle);
   setActionMode("replay", { disabled: true });
   setOrderText("Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt.");
 }
@@ -171,6 +175,7 @@ function updateToneDisplay(note) {
     els.toneSolfege.textContent = "–";
     els.toneInterval.textContent = "–";
     updateKeyboardHighlights();
+    refreshOctaveToggle();
     return;
   }
   const [base, octave] = splitNote(note);
@@ -178,6 +183,7 @@ function updateToneDisplay(note) {
   els.toneSolfege.textContent = SOLFEGE[base] || "–";
   els.toneInterval.textContent = intervalLabel(state.previousNote, note);
   updateKeyboardHighlights();
+  refreshOctaveToggle();
 }
 
 function describeTarget(note) {
@@ -189,6 +195,7 @@ function describeTarget(note) {
 }
 
 async function handleStart() {
+  await primeGoblinAudio().catch(() => {});
   if (state.running) {
     resetSession();
     await startSession();
@@ -260,6 +267,7 @@ function prepareListening() {
 }
 
 async function handleAction() {
+  await primeGoblinAudio().catch(() => {});
   if (state.actionMode === "next") {
     await advanceToNextTarget();
     return;
@@ -393,7 +401,8 @@ function handlePitchUpdate(info) {
   const targetBase = noteBase(state.currentTarget);
   const noteName = info.baseName;
   if (noteName === targetBase) {
-    if (Math.abs(info.cents) <= TARGET_TOLERANCE_CENTS) {
+    const tolerance = state.octaveStrict ? TARGET_TOLERANCE_CENTS : TARGET_TOLERANCE_OCTAVE_RELAXED;
+    if (Math.abs(info.cents) <= tolerance) {
       if (state.detection.matchNote !== noteName) {
         state.detection.matchNote = noteName;
         state.detection.matchStreak = 0;
@@ -501,3 +510,14 @@ window.addEventListener("beforeunload", () => {
 });
 
 init();
+function handleOctaveToggle() {
+  state.octaveStrict = !state.octaveStrict;
+  refreshOctaveToggle();
+}
+
+function refreshOctaveToggle() {
+  if (!els.octaveToggle) return;
+  const pressed = state.octaveStrict;
+  els.octaveToggle.setAttribute("aria-pressed", pressed ? "true" : "false");
+  els.octaveToggle.textContent = pressed ? "Oktavtreu" : "Stimmig";
+}

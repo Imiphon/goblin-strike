@@ -5,7 +5,7 @@
     --bg-panel-strong: rgba(27, 38, 60, 0.92);
     --border: rgba(148, 163, 184, 0.25);
     --text: #e2e8f0;
-    --muted: #94a3b8;
+    --muted: #c29e11;
     --accent: #facc15;
     --accent-strong: #f59e0b;
     --danger: #f87171;
@@ -116,7 +116,7 @@ body {
 
 .top-left-bottom {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 18px;
 }
 
@@ -165,6 +165,33 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.85rem;
+    margin-left: 12px;
+}
+
+.tone-toggle {
+    margin-left: 10px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.tone-toggle[aria-pressed="true"] {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: var(--accent);
+}
+
+.tone-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
 .tone-item {
@@ -172,9 +199,9 @@ body {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    border-radius: 999px;
+    /* border-radius: 999px;
     border: 1px solid rgba(148, 163, 184, 0.3);
-    background: rgba(148, 163, 184, 0.08);
+    background: rgba(148, 163, 184, 0.08); */
     font-weight: 600;
 }
 
@@ -228,6 +255,7 @@ body {
 .controls-row .ctrl {
     min-width: auto;
     padding: 8px 14px;
+    flex-shrink: 0;
 }
 
 .top-right {
@@ -283,7 +311,7 @@ body {
 
 .ctrl.ghost {
     background: rgba(148, 163, 184, 0.08);
-    color: var(--muted);
+    color: var(--accent-strong);
     border-color: rgba(148, 163, 184, 0.32);
 }
 
@@ -303,7 +331,7 @@ body {
     background: var(--bg-panel);
     border-radius: 24px;
     border: 1px solid var(--border);
-    padding: 24px;
+    padding: 12px;
     box-shadow: var(--shadow-lg);
 }
 
@@ -497,6 +525,7 @@ body {
 .key.black.missed {
     background: linear-gradient(#7f1d1d, #450a0a);
 }
+
 .app-footer {
     padding: 16px;
     text-align: center;
@@ -538,42 +567,33 @@ body {
     }
 
     .goblin-figure {
-        width: 70%;
         padding: 12px;
     }
 
-    .goblin-figure img {
-        max-width: 160px;
-    }
+
 
     .controls-row {
         justify-content: center;
-        gap: 4px;
-    }
-    .controls-row .ctrl {
-        font-size: x-small;
-        padding: 6px 10px;
+        gap: 8px;
+        max-width: 50%;
     }
 
-    .main-bottom {
-        flex: 0 0 30%;
-        height: 30vh;
-        max-height: 30vh;
-        min-height: 0;
+    .controls-row .ctrl {
+        font-size: 0.9em;
+        padding: 8px 12px;
+        flex: 1 1 140px;
+        max-width: 30%;
+        height: 100%;
+        flex-shrink: 0;
     }
 
     .main-bottom .keyboard-row {
-        height: 100%;
-        min-height: 0;
-        padding: 12px;
         overflow: hidden;
     }
 
     .main-bottom .keyboard {
-        height: 100%;
-        min-height: 0;
-        padding: 0 12px 12px;
         overflow: hidden;
+        height: 8em;
     }
 
     .main-bottom .keyboard .key {
@@ -624,6 +644,8 @@ body {
 
     .tone-display {
         gap: 8px;
+        display: flex;
+        flex-direction: column;
     }
 
     .tone-item {
@@ -644,11 +666,15 @@ body {
     .controls-row {
         gap: 10px;
         justify-content: center;
+        width: 100%;
     }
 
     .controls-row .ctrl {
         padding: 6px 10px;
         font-size: 0.78rem;
+        flex: 1 1 140px;
+        max-width: 100%;
+        flex-shrink: 0;
     }
 
     .main-bottom {

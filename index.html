@@ -24,15 +24,22 @@
         <main class="app-main">
             <div class="main-top">
                 <div class="top-left">
-                    <p id="orderText" class="order-text">Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt.</p>
+                    <p id="orderText" class="order-text">Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem
+                        Klavier gelb eingefärbt.</p>
                     <p class="rotate-notice" aria-hidden="true">Tipp: Für mehr Platz bitte Smartphone drehen.</p>
                     <div class="top-left-bottom">
                         <div class="order-stats">
                             <div class="tone-display" aria-live="polite">
-                                <span class="tone-label">Zielton</span>
-                                <span class="tone-item tone-name" id="toneNote">–</span>
-                                <span class="tone-item tone-solfege" id="toneSolfege">–</span>
-                                <span class="tone-item tone-interval" id="toneInterval">–</span>
+                                <div>
+                                    <span class="tone-label">Zielton</span>
+                                    <button id="octaveToggle" class="tone-toggle" type="button" aria-pressed="false"
+                                        title="Oktavtreue umschalten">Oktavtreu</button>
+                                </div>
+                                <div>
+                                    <span class="tone-item tone-name" id="toneNote">–</span>
+                                    <span class="tone-item tone-solfege" id="toneSolfege">–</span>
+                                    <span class="tone-item tone-interval" id="toneInterval">–</span>
+                                </div>
                             </div>
                         </div>
                         <div class="controls-row">
