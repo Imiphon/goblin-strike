@@ -190,6 +190,14 @@ body {
     color: var(--accent);
 }
 
+.tone-toggle.is-relaxed {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.45);
+    color: var(--danger);
+    text-decoration: line-through;
+    text-decoration-color: var(--danger);
+}
+
 .tone-toggle:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);

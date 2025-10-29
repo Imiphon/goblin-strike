@@ -43,13 +43,17 @@ export function primeGoblinAudio() {
   primePromise = Promise.all(
     ids.map((id) => {
       const audio = getAudio(id);
+      const previousVolume = audio.volume;
+      const wasMuted = audio.muted;
       audio.muted = true;
+      audio.volume = 0;
       audio.currentTime = 0;
       const playPromise = audio.play();
       const settle = () => {
         audio.pause();
         audio.currentTime = 0;
-        audio.muted = false;
+        audio.muted = wasMuted;
+        audio.volume = previousVolume;
       };
       if (playPromise && typeof playPromise.then === "function") {
         return playPromise.catch(() => {}).finally(settle);
@@ -71,45 +75,44 @@ export function stopGoblinAudio() {
 }
 
 export function showGoblin(stateId, { playAudio = true } = {}) {
-  if (!primed) {
-    primeGoblinAudio().catch(() => {});
-  }
-  const baseMeta = GOBLIN_STATES[stateId] || GOBLIN_STATES.waiting;
-  const meta = { ...baseMeta };
-  if (stateId === "win") {
-    const pick = succeedClips[Math.floor(Math.random() * succeedClips.length)];
-    meta.audio = pick;
-  } else if (stateId === "lose") {
-    const pick = failClips[Math.floor(Math.random() * failClips.length)];
-    meta.audio = pick;
-  }
-  if (imgEl) {
-    imgEl.dataset.goblinState = stateId;
-    imgEl.src = imagePath(meta.img);
-    imgEl.alt = meta.alt;
-    if (playAudio) {
-      imgEl.classList.add("is-animating");
-    } else {
-      imgEl.classList.remove("is-animating");
+  const run = () => {
+    const baseMeta = GOBLIN_STATES[stateId] || GOBLIN_STATES.waiting;
+    const meta = { ...baseMeta };
+    if (stateId === "win") {
+      const pick = succeedClips[Math.floor(Math.random() * succeedClips.length)];
+      meta.audio = pick;
+    } else if (stateId === "lose") {
+      const pick = failClips[Math.floor(Math.random() * failClips.length)];
+      meta.audio = pick;
     }
-  }
+    if (imgEl) {
+      imgEl.dataset.goblinState = stateId;
+      imgEl.src = imagePath(meta.img);
+      imgEl.alt = meta.alt;
+      if (playAudio) {
+        imgEl.classList.add("is-animating");
+      } else {
+        imgEl.classList.remove("is-animating");
+      }
+    }
 
-  if (!playAudio) {
+    if (!playAudio) {
+      stopGoblinAudio();
+      return Promise.resolve();
+    }
+
     stopGoblinAudio();
-    return Promise.resolve();
-  }
 
-  stopGoblinAudio();
-
-  return new Promise((resolve) => {
-    const audio = getAudio(meta.audio);
-    try {
-      audio.pause();
-    } catch {}
-    audio.currentTime = 0;
-    audio.muted = false;
-    audio.volume = 1;
-    currentAudio = audio;
+    return new Promise((resolve) => {
+      const audio = getAudio(meta.audio);
+      try {
+        audio.pause();
+      } catch {}
+      audio.currentTime = 0;
+      audio.muted = false;
+      audio.loop = false;
+      audio.volume = 1;
+      currentAudio = audio;
     const fallbackMs = Math.max(0, meta.fallbackMs ?? 1200);
     let resolved = false;
     let fallbackId = window.setTimeout(() => {
@@ -136,31 +139,38 @@ export function showGoblin(stateId, { playAudio = true } = {}) {
       resolve();
     }
 
-    audio.onended = () => finish();
-    audio.onerror = () => {
-      if (currentAudio === audio) {
-        currentAudio = null;
+      audio.onended = () => finish();
+      audio.onerror = () => {
+        if (currentAudio === audio) {
+          currentAudio = null;
+        }
+      };
+      audio.onloadedmetadata = () => {
+        if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+          return;
+        }
+        const durationMs = Math.ceil(audio.duration * 1000) + 200;
+        if (fallbackId) {
+          window.clearTimeout(fallbackId);
+        }
+        fallbackId = window.setTimeout(() => {
+          fallbackId = null;
+          finish();
+        }, Math.max(durationMs, fallbackMs));
+      };
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.then === "function") {
+        playPromise.catch(() => {
+          // Playback failed (likely autoplay policy). Keep the goblin visible until fallback triggers.
+        });
       }
-      // Let fallback finish handle the rest
-    };
-    audio.onloadedmetadata = () => {
-      if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
-        return;
-      }
-      const durationMs = Math.ceil(audio.duration * 1000) + 200;
-      if (fallbackId) {
-        window.clearTimeout(fallbackId);
-      }
-      fallbackId = window.setTimeout(() => {
-        fallbackId = null;
-        finish();
-      }, Math.max(durationMs, fallbackMs));
-    };
-    const playPromise = audio.play();
-    if (playPromise && typeof playPromise.then === "function") {
-      playPromise.catch(() => {
-        // Playback failed (likely autoplay policy). Keep the goblin visible until fallback triggers.
-      });
-    }
-  });
+    });
+  };
+
+  if (primed) {
+    return run();
+  }
+  return primeGoblinAudio()
+    .catch(() => {})
+    .then(run);
 }

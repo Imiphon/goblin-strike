@@ -50,9 +50,11 @@ const state = {
   detection: createDetectionState(),
   octaveStrict: true,
   streak: 0,
+  notesReady: false,
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
+let notePreloadPromise = null;
 const TARGET_TOLERANCE_CENTS = 50;
 const TARGET_TOLERANCE_OCTAVE_RELAXED = 1200; // allow any octave when toggle is off
 const SUCCESS_FRAMES = 10;
@@ -103,12 +105,42 @@ function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function setStartButtonBusy(busy) {
+  if (!els.btnStart) return;
+  els.btnStart.disabled = !!busy;
+  if (busy) {
+    els.btnStart.setAttribute("aria-busy", "true");
+  } else {
+    els.btnStart.removeAttribute("aria-busy");
+  }
+}
+
+async function ensureNotesReady() {
+  if (state.notesReady) return;
+  if (!notePreloadPromise) {
+    state.notesReady = true;
+    return;
+  }
+  try {
+    await notePreloadPromise;
+  } catch {
+    // ignore preload failures; we will attempt playback lazily.
+  } finally {
+    state.notesReady = true;
+  }
+}
+
 function init() {
   initGoblin(els.goblinImg);
   buildKeyboard(els.keyboard, KEY_RANGE, { onNote: handleManualKey });
-  preloadNotes(NOTES_IN_RANGE).catch(() => {});
+  notePreloadPromise = preloadNotes(NOTES_IN_RANGE)
+    .catch(() => {})
+    .then(() => {
+      state.notesReady = true;
+    });
   updateLevelButton();
   updateToneDisplay(null);
+  els.btnAction.textContent = "Noch mal";
   els.btnStart.addEventListener("click", handleStart);
   els.btnAction.addEventListener("click", handleAction);
   els.btnLevel.addEventListener("click", handleLevelToggle);
@@ -148,14 +180,8 @@ function setOrderText(text) {
 
 function setActionMode(mode, { disabled = false } = {}) {
   state.actionMode = mode;
-  els.btnAction.classList.remove("is-next", "is-replay");
-  if (mode === "next") {
-    els.btnAction.textContent = "Weiter";
-    els.btnAction.classList.add("is-next");
-  } else {
-    els.btnAction.textContent = "Noch mal";
-    els.btnAction.classList.add("is-replay");
-  }
+  els.btnAction.classList.toggle("is-next", mode === "next");
+  els.btnAction.classList.toggle("is-replay", mode !== "next");
   els.btnAction.disabled = disabled;
 }
 
@@ -222,13 +248,22 @@ function describeTarget(note) {
 }
 
 async function handleStart() {
-  await primeGoblinAudio().catch(() => {});
-  if (state.running) {
-    resetSession();
+  setStartButtonBusy(true);
+  try {
+    await primeGoblinAudio().catch(() => {});
+    if (!state.notesReady) {
+      setOrderText("Audios werden vorbereitet. Bitte einen Moment warten...");
+      await ensureNotesReady();
+    }
+    if (state.running) {
+      resetSession();
+      await startSession();
+      return;
+    }
     await startSession();
-    return;
+  } finally {
+    setStartButtonBusy(false);
   }
-  await startSession();
 }
 
 async function startSession() {
@@ -297,10 +332,6 @@ function prepareListening() {
 
 async function handleAction() {
   await primeGoblinAudio().catch(() => {});
-  if (state.actionMode === "next") {
-    await advanceToNextTarget();
-    return;
-  }
   await replayReference({ penalize: false });
 }
 
@@ -474,12 +505,14 @@ async function handleSuccess() {
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
   const successOrderText =
-    'Spiele den Ton so oft du magst noch einmal. Klicke auf "Weiter" und singe ihn.';
+    "Spiele den Ton so oft du magst noch einmal. Es geht gleich weiter.";
+  setActionMode("next", { disabled: true });
   setOrderText("SUPER!");
   await Promise.all([showGoblin("win"), delay(2000)]);
   setOrderText(successOrderText);
   showGoblin("hello", { playAudio: false });
-  setActionMode("next", { disabled: false });
+  await delay(400);
+  await advanceToNextTarget();
   state.detection.successFlashUntil = performance.now() + 1400;
   updateKeyboardHighlights();
   window.setTimeout(() => {
@@ -551,6 +584,9 @@ function handleOctaveToggle() {
 function refreshOctaveToggle() {
   if (!els.octaveToggle) return;
   const pressed = state.octaveStrict;
+  const label = pressed ? "OKTAVTREU" : "oktavtreu";
   els.octaveToggle.setAttribute("aria-pressed", pressed ? "true" : "false");
-  els.octaveToggle.textContent = "OKTAVTREU";
+  els.octaveToggle.classList.toggle("is-relaxed", !pressed);
+  els.octaveToggle.title = "Oktavtreue umschalten";
+  els.octaveToggle.textContent = label;
 }
