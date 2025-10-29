@@ -40,30 +40,32 @@ export function primeGoblinAudio() {
   if (primed) return primePromise || Promise.resolve();
   if (primePromise) return primePromise;
   const ids = ["hello", "waiting", ...succeedClips, ...failClips];
-  primePromise = Promise.all(
-    ids.map((id) => {
-      const audio = getAudio(id);
-      const previousVolume = audio.volume;
-      const wasMuted = audio.muted;
-      audio.muted = true;
-      audio.volume = 0;
-      audio.currentTime = 0;
-      const playPromise = audio.play();
-      const settle = () => {
+  const primeOne = (id) => {
+    const audio = getAudio(id);
+    audio.muted = true;
+    audio.volume = 0;
+    audio.currentTime = 0;
+    audio.loop = false;
+    const settle = () => {
+      try {
         audio.pause();
-        audio.currentTime = 0;
-        audio.muted = wasMuted;
-        audio.volume = previousVolume;
-      };
-      if (playPromise && typeof playPromise.then === "function") {
-        return playPromise.catch(() => {}).finally(settle);
-      }
-      settle();
-      return Promise.resolve();
-    })
-  ).finally(() => {
-    primed = true;
-  });
+      } catch {}
+      audio.currentTime = 0;
+      audio.volume = 0;
+      audio.muted = true;
+    };
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      return playPromise.catch(() => {}).finally(settle);
+    }
+    settle();
+    return Promise.resolve();
+  };
+  primePromise = ids
+    .reduce((chain, id) => chain.then(() => primeOne(id)), Promise.resolve())
+    .finally(() => {
+      primed = true;
+    });
   return primePromise;
 }
 

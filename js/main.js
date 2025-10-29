@@ -23,6 +23,8 @@ const els = {
   btnLevel: document.getElementById("btnLevel"),
   keyboard: document.getElementById("keyboard"),
   goblinImg: document.getElementById("goblinImg"),
+  tunerIndicator: document.getElementById("tunerIndicator"),
+  tunerValue: document.getElementById("tunerValue"),
 };
 
 function createDetectionState() {
@@ -34,6 +36,7 @@ function createDetectionState() {
     lastMissedNote: null,
     missUntil: 0,
     successFlashUntil: 0,
+    ignoreUntil: 0,
   };
 }
 
@@ -48,17 +51,28 @@ const state = {
   listening: false,
   actionMode: "replay",
   detection: createDetectionState(),
-  octaveStrict: true,
+  octaveStrict: false,
   streak: 0,
   notesReady: false,
 };
 
 const NOTES_IN_RANGE = linearNotes(KEY_RANGE.min, KEY_RANGE.max);
+const INITIAL_REFERENCE_NOTE = "E2";
 let notePreloadPromise = null;
+let microphoneResumeTimeout = 0;
+let tunerHoldUntil = 0;
+let tunerHoldValue = null;
 const TARGET_TOLERANCE_CENTS = 50;
 const TARGET_TOLERANCE_OCTAVE_RELAXED = 1200; // allow any octave when toggle is off
 const SUCCESS_FRAMES = 10;
 const FAILURE_FRAMES = 14;
+const LISTENING_RESUME_DELAY_MS = 220;
+const DETECTION_GUARD_MS = 480;
+const MIDI_OFFSET = 12;
+const TUNER_MAX_CENTS = 300;
+const TUNER_MAX_DEG = 70;
+const TUNER_IN_HOLD_MS = 3200;
+const A4_HZ = 440;
 const ORDER_HIGHLIGHTS = [
   {
     regex: /Singe folgendes: ([^·]+) · ([^·]+) · ([^.]+)/,
@@ -99,6 +113,64 @@ function applyOrderHighlights(text) {
     });
   });
   return escaped;
+}
+
+function setTunerIdle() {
+  tunerHoldUntil = 0;
+  tunerHoldValue = null;
+  updateTunerIndicator(null, { forceIdle: true });
+}
+
+function updateTunerIndicator(deltaCents, { forceIdle = false } = {}) {
+  const indicator = els.tunerIndicator;
+  const valueEl = els.tunerValue;
+  if (!indicator || !valueEl) return;
+  const classes = ["is-in", "is-high", "is-low", "is-idle"];
+  classes.forEach((cls) => indicator.classList.remove(cls));
+  const now = performance.now();
+  const holdActive = tunerHoldUntil && now < tunerHoldUntil && tunerHoldValue;
+  let finalRotation = "0deg";
+  let finalLabel = "–";
+  let stateClass = "is-idle";
+  if (typeof deltaCents === "number" && Number.isFinite(deltaCents)) {
+    const clamped = Math.max(-TUNER_MAX_CENTS, Math.min(TUNER_MAX_CENTS, deltaCents));
+    const rotation = (clamped / TUNER_MAX_CENTS) * TUNER_MAX_DEG;
+    const rounded = Math.round(deltaCents);
+    const label = `${rounded > 0 ? "+" : ""}${rounded}¢`;
+    if (Math.abs(deltaCents) <= TARGET_TOLERANCE_CENTS) {
+      stateClass = "is-in";
+      tunerHoldUntil = now + TUNER_IN_HOLD_MS;
+      tunerHoldValue = { rotation: `${rotation}deg`, label };
+      finalRotation = tunerHoldValue.rotation;
+      finalLabel = tunerHoldValue.label;
+    } else if (holdActive) {
+      stateClass = "is-in";
+      finalRotation = tunerHoldValue.rotation;
+      finalLabel = tunerHoldValue.label;
+    } else {
+      stateClass = deltaCents > 0 ? "is-high" : "is-low";
+      finalRotation = `${rotation}deg`;
+      finalLabel = label;
+      tunerHoldUntil = 0;
+      tunerHoldValue = null;
+    }
+  } else if (holdActive && !forceIdle) {
+    stateClass = "is-in";
+    finalRotation = tunerHoldValue.rotation;
+    finalLabel = tunerHoldValue.label;
+  } else {
+    tunerHoldUntil = 0;
+    tunerHoldValue = null;
+  }
+  indicator.style.setProperty("--needle-rotation", finalRotation);
+  valueEl.textContent = finalLabel;
+  indicator.classList.add(stateClass);
+}
+
+function normalizeCents(value) {
+  if (!Number.isFinite(value)) return 0;
+  const normalized = ((value % 1200) + 1200) % 1200;
+  return normalized > 600 ? normalized - 1200 : normalized;
 }
 
 function delay(ms) {
@@ -149,6 +221,7 @@ function init() {
   setOrderText("Höre den ersten Ton und singe ihn nach. Der Ton wird auf dem Klavier gelb eingefärbt.");
   refreshOctaveToggle();
   updateStreakDisplay();
+  setTunerIdle();
 }
 
 function updateLevelButton() {
@@ -180,6 +253,11 @@ function setOrderText(text) {
 
 function setActionMode(mode, { disabled = false } = {}) {
   state.actionMode = mode;
+  if (mode === "next") {
+    els.btnAction.textContent = "Weiter";
+  } else {
+    els.btnAction.textContent = "Noch mal";
+  }
   els.btnAction.classList.toggle("is-next", mode === "next");
   els.btnAction.classList.toggle("is-replay", mode !== "next");
   els.btnAction.disabled = disabled;
@@ -269,6 +347,7 @@ async function handleStart() {
 async function startSession() {
   setActionMode("replay", { disabled: true });
   setMicrophonePaused(true);
+  state.listening = false;
   const helloPromise = showGoblin("hello");
   try {
     await ensureMicrophone();
@@ -288,7 +367,8 @@ async function startSession() {
   updateToneDisplay(null);
   els.btnStart.textContent = "Neu";
   resetStreak();
-  const initialNote = "C2";
+  await ensureNotesReady();
+  const initialNote = INITIAL_REFERENCE_NOTE;
   state.referenceNote = initialNote;
   state.currentTarget = initialNote;
   updateToneDisplay(state.currentTarget);
@@ -301,6 +381,11 @@ async function startSession() {
 
 function resetSession() {
   setMicrophonePaused(true);
+  if (microphoneResumeTimeout) {
+    window.clearTimeout(microphoneResumeTimeout);
+    microphoneResumeTimeout = 0;
+  }
+  state.listening = false;
   state.running = false;
   state.stage = 0;
   state.previousNote = null;
@@ -318,13 +403,31 @@ function resetSession() {
   showGoblin("waiting", { playAudio: false });
   stopMicrophone();
   state.microphoneReady = false;
+  setTunerIdle();
 }
 
 function prepareListening() {
-  state.listening = true;
+  if (microphoneResumeTimeout) {
+    window.clearTimeout(microphoneResumeTimeout);
+    microphoneResumeTimeout = 0;
+  }
+  state.listening = false;
   state.detection = createDetectionState();
+  setTunerIdle();
+  const activateListening = () => {
+    state.detection.ignoreUntil = performance.now() + DETECTION_GUARD_MS;
+    state.listening = true;
+    if (state.microphoneReady) {
+      setMicrophonePaused(false);
+    }
+  };
   if (state.microphoneReady) {
-    setMicrophonePaused(false);
+    microphoneResumeTimeout = window.setTimeout(() => {
+      microphoneResumeTimeout = 0;
+      activateListening();
+    }, LISTENING_RESUME_DELAY_MS);
+  } else {
+    activateListening();
   }
   setActionMode("replay", { disabled: false });
   updateKeyboardHighlights();
@@ -405,6 +508,7 @@ function getLevelBounds(level, stage) {
 
 async function playReference(note, { announce = false } = {}) {
   setMicrophonePaused(true);
+  state.listening = false;
   const successActive = state.actionMode === "next" && state.currentTarget;
   const successNote = successActive ? state.currentTarget : null;
   setHighlights({
@@ -414,7 +518,6 @@ async function playReference(note, { announce = false } = {}) {
     success: successNote,
   });
   await playNote(note);
-  setMicrophonePaused(false);
 }
 
 function handleLevelToggle() {
@@ -439,6 +542,11 @@ async function handleManualKey(note) {
     await playNote(note);
     if (wasListening) {
       setMicrophonePaused(false);
+      state.detection.matchStreak = 0;
+      state.detection.matchNote = null;
+      state.detection.wrongNote = null;
+      state.detection.wrongStreak = 0;
+      state.detection.ignoreUntil = performance.now() + DETECTION_GUARD_MS;
     }
     return;
   }
@@ -452,14 +560,46 @@ async function handleManualKey(note) {
 }
 
 function handlePitchUpdate(info) {
-  if (!state.listening || !state.currentTarget) return;
-  if (!info) {
+  if (!state.currentTarget) {
+    setTunerIdle();
+    return;
+  }
+  if (!state.listening) {
+    return;
+  }
+  const now = performance.now();
+  if (state.detection.ignoreUntil && now < state.detection.ignoreUntil) {
+    setTunerIdle();
     state.detection.matchStreak = 0;
     state.detection.matchNote = null;
     state.detection.wrongNote = null;
     state.detection.wrongStreak = 0;
     return;
   }
+  state.detection.ignoreUntil = 0;
+  if (!info) {
+    setTunerIdle();
+    state.detection.matchStreak = 0;
+    state.detection.matchNote = null;
+    state.detection.wrongNote = null;
+    state.detection.wrongStreak = 0;
+    return;
+  }
+  const targetMidi = pitchIndex(state.currentTarget) + MIDI_OFFSET;
+  const targetHz = A4_HZ * Math.pow(2, (targetMidi - 69) / 12);
+  let deltaCents = null;
+  if (
+    Number.isFinite(targetHz) &&
+    targetHz > 0 &&
+    Number.isFinite(info.hz) &&
+    info.hz > 0
+  ) {
+    deltaCents = 1200 * Math.log2(info.hz / targetHz);
+    if (!state.octaveStrict) {
+      deltaCents = normalizeCents(deltaCents);
+    }
+  }
+  updateTunerIndicator(deltaCents);
   const targetBase = noteBase(state.currentTarget);
   const noteName = info.baseName;
   if (noteName === targetBase) {
@@ -501,6 +641,10 @@ function handlePitchUpdate(info) {
 async function handleSuccess() {
   state.listening = false;
   setMicrophonePaused(true);
+  if (microphoneResumeTimeout) {
+    window.clearTimeout(microphoneResumeTimeout);
+    microphoneResumeTimeout = 0;
+  }
   incrementStreak();
   state.previousNote = state.currentTarget;
   state.referenceNote = state.currentTarget;
@@ -523,6 +667,11 @@ async function handleSuccess() {
 async function handleFailure() {
   state.listening = false;
   setMicrophonePaused(true);
+  setTunerIdle();
+  if (microphoneResumeTimeout) {
+    window.clearTimeout(microphoneResumeTimeout);
+    microphoneResumeTimeout = 0;
+  }
   resetStreak();
   setOrderText("Das war ein falscher Ton. Der Kobold spielt den vorherigen Ton noch einmal.");
   state.detection.lastMissedNote = state.currentTarget;
@@ -573,6 +722,10 @@ function updateKeyboardHighlights() {
 
 window.addEventListener("beforeunload", () => {
   stopMicrophone();
+  if (microphoneResumeTimeout) {
+    window.clearTimeout(microphoneResumeTimeout);
+    microphoneResumeTimeout = 0;
+  }
 });
 
 init();
@@ -584,7 +737,7 @@ function handleOctaveToggle() {
 function refreshOctaveToggle() {
   if (!els.octaveToggle) return;
   const pressed = state.octaveStrict;
-  const label = pressed ? "OKTAVTREU" : "oktavtreu";
+  const label = "OKTAVTREU";
   els.octaveToggle.setAttribute("aria-pressed", pressed ? "true" : "false");
   els.octaveToggle.classList.toggle("is-relaxed", !pressed);
   els.octaveToggle.title = "Oktavtreue umschalten";

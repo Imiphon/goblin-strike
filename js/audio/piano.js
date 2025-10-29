@@ -48,14 +48,47 @@ export function playNote(note, velocity = 1) {
   return new Promise((resolve, reject) => {
     try {
       const base = loadHtmlAudio(note);
-      const instance = base.cloneNode();
-      instance.volume = Math.max(0, Math.min(1, velocity));
-      instance.addEventListener("ended", () => resolve(), { once: true });
-      instance.addEventListener("error", () => resolve(), { once: true });
-      const playPromise = instance.play();
-      if (playPromise && typeof playPromise.then === "function") {
-        playPromise.catch(() => resolve());
-      }
+      const volume = Math.max(0, Math.min(1, velocity));
+      const playFrom = (audio, { fallback } = {}) => {
+        try {
+          audio.pause();
+        } catch {}
+        audio.currentTime = 0;
+        audio.volume = volume;
+        audio.loop = false;
+        const onEnded = () => {
+          audio.removeEventListener("ended", onEnded);
+          audio.removeEventListener("error", onError);
+          resolve();
+        };
+        const onError = () => {
+          audio.removeEventListener("ended", onEnded);
+          audio.removeEventListener("error", onError);
+          if (fallback) {
+            fallback();
+          } else {
+            resolve();
+          }
+        };
+        audio.addEventListener("ended", onEnded, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+        const attempt = audio.play();
+        if (attempt && typeof attempt.then === "function") {
+          attempt.catch(() => {
+            audio.removeEventListener("ended", onEnded);
+            audio.removeEventListener("error", onError);
+            if (fallback) {
+              fallback();
+            } else {
+              resolve();
+            }
+          });
+        }
+      };
+      const instance = base.cloneNode(true);
+      playFrom(instance, {
+        fallback: () => playFrom(base),
+      });
     } catch (err) {
       reject(err);
     }
